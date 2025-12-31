@@ -1,0 +1,194 @@
+# NeuroFusionXAI Configuration File
+# ===================================
+
+# Model Architecture Configuration
+model:
+  # Vision Transformer Settings
+  vit:
+    patch_size: [16, 16, 16]  # 3D patch size for volumetric data
+    embed_dim: 768            # Embedding dimension
+    num_heads: 12             # Number of attention heads
+    num_layers: 12            # Number of transformer blocks
+    mlp_ratio: 4.0            # MLP hidden dim ratio
+    dropout: 0.1              # Dropout rate
+    attention_dropout: 0.1    # Attention dropout rate
+    
+  # Cross-Attention Fusion Settings
+  fusion:
+    num_layers: 8             # Number of fusion layers
+    num_heads: 16             # Number of attention heads
+    hidden_dim: 1024          # Hidden dimension
+    dropout: 0.1              # Dropout rate
+    
+  # Graph Neural Network Settings
+  gnn:
+    num_layers: 3             # Number of GAT layers
+    hidden_dims: [256, 128, 64]  # Hidden dimensions per layer
+    num_heads: 8              # Number of attention heads
+    dropout: 0.1              # Dropout rate
+    num_regions: 116          # Number of brain regions (AAL atlas)
+    
+  # Classification Head
+  classifier:
+    hidden_dims: [512, 256]   # Hidden layer dimensions
+    num_classes: 4            # NC, MCI, Early AD, Advanced AD
+    dropout: 0.3              # Dropout rate
+
+# Privacy Configuration
+privacy:
+  # Differential Privacy
+  differential_privacy:
+    epsilon: 0.5              # Privacy budget
+    delta: 1.0e-5             # Delta parameter
+    noise_multiplier: 1.1     # Noise multiplier for DP-SGD
+    max_grad_norm: 1.0        # Gradient clipping threshold
+    
+  # Homomorphic Encryption (CKKS)
+  homomorphic_encryption:
+    poly_modulus_degree: 8192
+    coeff_mod_bit_sizes: [60, 40, 40, 60]
+    scale: 40                 # Scale for encoding
+    
+  # Secure Aggregation
+  secure_aggregation:
+    enabled: true
+    threshold: 3              # Minimum clients for aggregation
+
+# Federated Learning Configuration
+federated:
+  enabled: true
+  num_sites: 5                # Number of participating institutions
+  local_epochs: 5             # Local training epochs per round
+  num_rounds: 24              # Total federated rounds (120/5)
+  client_fraction: 1.0        # Fraction of clients per round
+  
+  # Domain-Shift Aware Aggregation
+  domain_aware:
+    enabled: true
+    alignment_weight: 0.1     # Weight for domain alignment
+
+# Training Configuration
+training:
+  batch_size: 16
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  epochs: 120
+  warmup_epochs: 10
+  
+  optimizer:
+    name: adamw
+    betas: [0.9, 0.999]
+    eps: 1.0e-8
+    
+  scheduler:
+    name: cosine
+    min_lr: 1.0e-6
+    
+  # Loss Weights (Eq. 15 in paper)
+  loss_weights:
+    classification: 1.0       # L_ce
+    contrastive: 0.4          # lambda_1 * L_contrastive
+    consistency: 0.3          # lambda_2 * L_consistency
+    privacy: 0.3              # lambda_3 * L_privacy
+    
+  # Gradient Clipping
+  grad_clip: 1.0
+  
+  # Mixed Precision
+  mixed_precision: true
+  
+  # Early Stopping
+  early_stopping:
+    patience: 20
+    min_delta: 0.001
+
+# Data Configuration
+data:
+  # Input dimensions (after preprocessing)
+  input_shape: [1, 96, 112, 96]  # [C, D, H, W]
+  
+  # Modalities
+  modalities:
+    - smri
+    - fmri
+    - pet
+    
+  # Preprocessing
+  preprocessing:
+    normalize: true
+    skull_strip: true
+    register_to_mni: true
+    target_spacing: [2.0, 2.0, 2.0]  # mm
+    
+  # Augmentation
+  augmentation:
+    enabled: true
+    random_flip: true
+    random_rotation: 15       # degrees
+    random_scale: [0.9, 1.1]
+    gaussian_noise: 0.01
+    
+  # Cross-validation
+  cross_validation:
+    num_folds: 5
+    stratified: true
+
+# Explainability Configuration
+explainability:
+  # LIME Settings
+  lime:
+    num_samples: 1000
+    num_features: 10
+    
+  # SHAP Settings
+  shap:
+    background_samples: 100
+    max_evals: 500
+    
+  # Grad-CAM Settings
+  gradcam:
+    target_layers: ["fusion.layer_7", "vit_smri.blocks.11"]
+    
+  # Clinical Validation
+  clinical:
+    biomarker_threshold: 0.7
+    region_overlap_threshold: 0.5
+
+# Evaluation Configuration
+evaluation:
+  metrics:
+    - accuracy
+    - sensitivity
+    - specificity
+    - f1_score
+    - auc_roc
+    - auc_pr
+    
+  # Privacy Attack Evaluation
+  privacy_attacks:
+    membership_inference: true
+    model_inversion: true
+    property_inference: true
+
+# Logging and Checkpointing
+logging:
+  log_dir: "./logs"
+  tensorboard: true
+  wandb:
+    enabled: false
+    project: "NeuroFusionXAI"
+    entity: null
+    
+checkpointing:
+  checkpoint_dir: "./checkpoints"
+  save_every: 10              # Save every N epochs
+  keep_last: 5                # Keep last N checkpoints
+
+# Hardware Configuration
+hardware:
+  device: "cuda"              # cuda or cpu
+  num_workers: 4              # DataLoader workers
+  pin_memory: true
+  
+# Random Seed for Reproducibility
+seed: 42
